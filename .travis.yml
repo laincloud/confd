@@ -1,32 +1,22 @@
+sudo: false
 language: go
 go:
-  - 1.4
-  - tip
-services:
-  - redis
-before_install:
-  # install consul
-  - wget https://dl.bintray.com/mitchellh/consul/0.5.0_linux_amd64.zip
-  - unzip 0.5.0_linux_amd64.zip
-  - sudo mv consul /bin/
-  - consul agent -server -bootstrap-expect 1 -data-dir /tmp/consul &
-  # install etcd
-  - wget https://github.com/coreos/etcd/releases/download/v2.0.9/etcd-v2.0.9-linux-amd64.tar.gz
-  - tar xzf etcd-v2.0.9-linux-amd64.tar.gz
-  - sudo mv etcd-v2.0.9-linux-amd64/etcd /bin/
-  - etcd &
-  # install DynamoDB
-  - mkdir /tmp/dynamodb
-  - wget -O - http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest | tar xz --directory /tmp/dynamodb
-  - java -Djava.library.path=/tmp/dynamodb/DynamoDBLocal_lib -jar /tmp/dynamodb/DynamoDBLocal.jar -inMemory &
+- 1.8.x
 install:
-  - sudo pip install awscli
-  - go get github.com/constabulary/gb/...
-  - go get golang.org/x/tools/cmd/cover
-  - gb build all
-  - sudo ./install
+- go get github.com/Masterminds/glide
+before_script:
+- glide install
 script:
-  - ./test
-  - bash integration/consul/test.sh
-  - bash integration/etcd/test.sh
-  - bash integration/redis/test.sh
+- mv $GOPATH/src/github.com/laincloud $GOPATH/src/github.com/kelseyhightower
+- go build -o bin/confd .
+after_success:
+- xz -9k bin/confd
+deploy:
+  provider: releases
+  api_key:
+    secure: Ez9MVB4Rghxmh2VFfKN7ypzY6XkFrS3CKPC0H8fNLVePp/vt0qNNhP6+U4+yLUM3hgazFOft1idGh7kAZYvDj7Wq+aytvRMUO50mCohgrKf8UWxivMH53pr0H/h0H05/aaQzWd3jNv7Zb6OVZXNHkS9jbSUIos4rECZqBoEggxPDI03ZPBtqvT+XA0OD7eGVb6OThCO30SuHkk/aX3xGKPOLd6x32YSJhpvLiVq+Cx3WGYsM/pAQO7Kfm9GN2RXoiXiJOy8tO2otmqJYox+FNBYkbL91Oeu2X7VIkQecsv3Ahmu/aJU5AAU1IkrxcwD1JEeCCeMi/aHfQWh7ux6ezXiKIXD2ajMciIoW4VE32ZKjuiktZibkGcGZ1Q+5rwctmzqWwGzsFjTCGYXhbvy1jpCXogGLrC5l70LRaKFYAiFd5LdrsUWD28KQ6j7Ga37BemVsXpTjCyLz3ZgMPlc0CN+qZYbp8iB7ETf9JiUiFnMPAYZR/EhXaeIRX0U7h8rzT28QvwQWLackNmouhAGuAgWPHE4psZAgMy1Mr2XJwDrk3sFHVkZuu9pv6bL+CM7dZsLGlFaWwfuqp9x38XKurF3ff1C6lzPL52gYt9e0oXvB2lPNVwwYSNOEQ2QvVMgGGQenE0xu4cXOaJUJZC+RSKr5KRrjNoouGa37/HiSotM=
+  file:
+  - bin/confd
+  - bin/confd.xz
+  on:
+    tags: true
